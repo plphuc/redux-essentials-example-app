@@ -1,45 +1,42 @@
-import React, { useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 
-import { addNewPost } from './postsSlice'
+import { selectAllUsers } from '../users/usersSlice';
+import { useAddNewPostMutation } from '../api/apiSlice';
 
 export const AddPostForm = () => {
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-  const [userId, setUserId] = useState('')
-  const [addRequestStatus, setAddRequestStatus] = useState('idle')
+  const [addNewPost, { isLoading }] = useAddNewPostMutation();
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [userId, setUserId] = useState('');
 
-  const dispatch = useDispatch()
-  const users = useSelector((state) => state.users)
+  const users = useSelector(selectAllUsers);
 
-  const onTitleChanged = (e) => setTitle(e.target.value)
-  const onContentChanged = (e) => setContent(e.target.value)
-  const onAuthorChanged = (e) => setUserId(e.target.value)
+  const onTitleChanged = (e) => setTitle(e.target.value);
+  const onContentChanged = (e) => setContent(e.target.value);
+  const onAuthorChanged = (e) => setUserId(e.target.value);
 
-  const canSave =
-    [title, content, userId].every(Boolean) && addRequestStatus === 'idle'
+  // cannot use with useState because it will cannot trigger onSavePost in the next re-render
+  const canSave = [title, content, userId].every(Boolean) && !isLoading;
 
   const onSavePostClicked = async () => {
     if (canSave) {
       try {
-        setAddRequestStatus('pending')
-        await dispatch(addNewPost({ title, content, user: userId })).unwrap()
-        setTitle('')
-        setContent('')
-        setUserId('')
+        await addNewPost({ title, content, user: userId }).unwrap();
+        setTitle('');
+        setContent('');
+        setUserId('');
       } catch (err) {
-        console.error('Failed to save the post: ', err)
-      } finally {
-        setAddRequestStatus('idle')
+        console.error('Failed to save the post: ', err);
       }
     }
-  }
+  };
 
   const usersOptions = users.map((user) => (
     <option key={user.id} value={user.id}>
       {user.name}
     </option>
-  ))
+  ));
 
   return (
     <section>
@@ -71,5 +68,5 @@ export const AddPostForm = () => {
         </button>
       </form>
     </section>
-  )
-}
+  );
+};

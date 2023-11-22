@@ -1,12 +1,12 @@
-import React, { useEffect } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
-import { Link } from 'react-router-dom'
-
-import { Spinner } from '../../components/Spinner'
-import { PostAuthor } from './PostAuthor'
-import { TimeAgo } from './TimeAgo'
-import { ReactionButtons } from './ReactionButtons'
-import { selectAllPosts, fetchPosts } from './postsSlice'
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useMemo } from 'react';
+import { Spinner } from '../../components/Spinner';
+import { PostAuthor } from './PostAuthor';
+import { TimeAgo } from './TimeAgo';
+import { ReactionButtons } from './ReactionButtons';
+import { useGetPostsQuery } from '../api/apiSlice';
+import classNames from 'classnames';
 
 const PostExcerpt = ({ post }) => {
   return (
@@ -18,48 +18,56 @@ const PostExcerpt = ({ post }) => {
       </div>
       <p className="post-content">{post.content.substring(0, 100)}</p>
 
-      <ReactionButtons post={post} />
+      <ReactionButtons post={post} key={post.id} />
       <Link to={`/posts/${post.id}`} className="button muted-button">
         View Post
       </Link>
     </article>
-  )
-}
+  );
+};
 
 export const PostsList = () => {
-  const dispatch = useDispatch()
-  const posts = useSelector(selectAllPosts)
+  // posts = [] to always have an array to sort
+  const {
+    data: posts = [],
+    isLoading,
+    isFetching,
+    refetch,
+    isSuccess,
+    isError,
+    error,
+  } = useGetPostsQuery();
 
-  const postStatus = useSelector((state) => state.posts.status)
-  const error = useSelector((state) => state.posts.error)
+  // useMemo() to avoid re-sorting every re-render
+  const sortedPosts = useMemo(() => {
+    const sortedPosts = posts.slice();
+    sortedPosts.sort((a, b) => b.date.localeCompare(a.date));
+    return sortedPosts;
+  }, [posts]);
 
-  useEffect(() => {
-    if (postStatus === 'idle') {
-      dispatch(fetchPosts())
+  const handleShowPosts = () => {
+    if (isLoading) {
+      return <Spinner text="Loading..." />;
+    } else if (isSuccess) {
+      // Since the posts array already has all of the post objects,
+      // we've switched back to passing the post objects themselves down as props.
+      const renderedPosts = sortedPosts.map((post) => (
+        <PostExcerpt post={post} key={post.id} />
+      ));
+      const containerClassname = classNames('posts-container', {
+        disabled: isFetching,
+      });
+      return <div className={containerClassname}>{renderedPosts}</div>;
+    } else if (isError) {
+      return <div>{error}</div>;
     }
-  }, [postStatus, dispatch])
-
-  let content
-
-  if (postStatus === 'loading') {
-    content = <Spinner text="Loading..." />
-  } else if (postStatus === 'succeeded') {
-    // Sort posts in reverse chronological order by datetime string
-    const orderedPosts = posts
-      .slice()
-      .sort((a, b) => b.date.localeCompare(a.date))
-
-    content = orderedPosts.map((post) => (
-      <PostExcerpt key={post.id} post={post} />
-    ))
-  } else if (postStatus === 'failed') {
-    content = <div>{error}</div>
-  }
+  };
 
   return (
     <section className="posts-list">
       <h2>Posts</h2>
-      {content}
+      <button onClick={refetch}>Refetch posts</button>
+      {handleShowPosts()}
     </section>
-  )
-}
+  );
+};
