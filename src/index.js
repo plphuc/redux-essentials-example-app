@@ -6,7 +6,7 @@ import store from './app/store'
 import { Provider } from 'react-redux'
 
 import { worker } from './api/server'
-import { apiSlice } from './features/api/apiSlice'
+import { extendedApiSlice } from './features/users/usersSlice'
 
 
 // Wrap app rendering so we can wait for the mock API to initialize
@@ -15,7 +15,7 @@ async function start() {
   await worker.start({ onUnhandledRequest: 'bypass' })
   
   // to fetch the list of users outside of React, we can dispatch the getUser.initiate() thunk
-  store.dispatch(apiSlice.endpoints.getUsers.initiate())
+  store.dispatch(extendedApiSlice.endpoints.getUsers.initiate())
 
   ReactDOM.render(
     <React.StrictMode>
